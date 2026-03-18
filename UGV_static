@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define N 70
+
+typedef struct {
+    int x, y;
+    int g, h, f;
+    int parentX, parentY;
+} Node;
+
+int grid[N][N]; // 0 = free, 1 = obstacle
+int closed[N][N];
+Node open[N*N];
+int openCount = 0;
+
+int heuristic(int x1, int y1, int x2, int y2) {
+    return abs(x1 - x2) + abs(y1 - y2);
+}
+
+int isValid(int x, int y) {
+    return (x >= 0 && x < N && y >= 0 && y < N && grid[x][y] == 0);
+}
+
+void addOpen(Node n) {
+    open[openCount++] = n;
+}
+Node getBest() {
+    int best = 0;
+    for (int i = 1; i < openCount; i++) {
+        if (open[i].f < open[best].f)
+            best = i;
+    }
+    Node n = open[best];
+    open[best] = open[--openCount];
+    return n;
+}
+
+void aStar(int sx, int sy, int gx, int gy) {
+    Node start = {sx, sy, 0, 0, 0, -1, -1};
+    start.h = heuristic(sx, sy, gx, gy);
+    start.f = start.h;
+
+    addOpen(start);
+
+    while (openCount > 0) {
+        Node current = getBest();
+
+        if (current.x == gx && current.y == gy) {
+            printf("Goal reached!\n");
+            return;
+        }
+
+        closed[current.x][current.y] = 1;
+
+        int dx[] = {-1, 1, 0, 0};
+        int dy[] = {0, 0, -1, 1};
+
+        for (int i = 0; i < 4; i++) {
+            int nx = current.x + dx[i];
+            int ny = current.y + dy[i];
+
+            if (isValid(nx, ny) && !closed[nx][ny]) {
+                Node next;
+                next.x = nx;
+                next.y = ny;
+                next.g = current.g + 1;
+                next.h = heuristic(nx, ny, gx, gy);
+                next.f = next.g + next.h;
+                next.parentX = current.x;
+                next.parentY = current.y;
+
+                addOpen(next);
+            }
+        }
+    }
+
+    printf("No path found\n");
+}
+
+int main() {
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            grid[i][j] = 0;
+    for (int i = 10; i < 30; i++)
+        grid[i][20] = 1;
+
+    aStar(0, 0, 50, 50);
+
+    return 0;
+}
