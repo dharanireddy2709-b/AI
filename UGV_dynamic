@@ -1,0 +1,173 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define N 20   // smaller grid for demo
+
+typedef struct {
+    int x, y;
+    int g, h, f;
+    int parentX, parentY;
+} Node;
+
+int grid[N][N];      // actual world (unknown obstacles)
+int known[N][N];     // what UGV knows
+int closed[N][N];
+
+Node open[N*N];
+int openCount;
+
+// Heuristic (Manhattan)
+int heuristic(int x1, int y1, int x2, int y2) {
+    return abs(x1 - x2) + abs(y1 - y2);
+}
+
+int isValid(int x, int y) {
+    return (x >= 0 && x < N && y >= 0 && y < N && known[x][y] == 0);
+}
+
+// Add to open list
+void addOpen(Node n) {
+    open[openCount++] = n;
+}
+
+// Get node with lowest f
+Node getBest() {
+    int best = 0;
+    for (int i = 1; i < openCount; i++) {
+        if (open[i].f < open[best].f)
+            best = i;
+    }
+    Node n = open[best];
+    open[best] = open[--openCount];
+    return n;
+}
+
+// Store parent info
+int parentX[N][N], parentY[N][N];
+
+// A* search
+int aStar(int sx, int sy, int gx, int gy) {
+    openCount = 0;
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            closed[i][j] = 0;
+
+    Node start = {sx, sy, 0, heuristic(sx, sy, gx, gy), 0, -1, -1};
+    start.f = start.g + start.h;
+
+    addOpen(start);
+
+    while (openCount > 0) {
+        Node current = getBest();
+
+        if (current.x == gx && current.y == gy) {
+            parentX[gx][gy] = current.parentX;
+            parentY[gx][gy] = current.parentY;
+            return 1; // found
+        }
+
+        closed[current.x][current.y] = 1;
+
+        int dx[] = {-1, 1, 0, 0};
+        int dy[] = {0, 0, -1, 1};
+
+        for (int i = 0; i < 4; i++) {
+            int nx = current.x + dx[i];
+            int ny = current.y + dy[i];
+
+            if (isValid(nx, ny) && !closed[nx][ny]) {
+                Node next;
+                next.x = nx;
+                next.y = ny;
+                next.g = current.g + 1;
+                next.h = heuristic(nx, ny, gx, gy);
+                next.f = next.g + next.h;
+                next.parentX = current.x;
+                next.parentY = current.y;
+
+                parentX[nx][ny] = current.x;
+                parentY[nx][ny] = current.y;
+
+                addOpen(next);
+            }
+        }
+    }
+    return 0; // no path
+}
+int getNextStep(int sx, int sy, int gx, int gy, int *nx, int *ny) {
+    int x = gx, y = gy;
+
+    while (!(parentX[x][y] == sx && parentY[x][y] == sy)) {
+        int px = parentX[x][y];
+        int py = parentY[x][y];
+
+        x = px;
+        y = py;
+
+        if (x == -1 || y == -1) return 0;
+    }
+
+    *nx = x;
+    *ny = y;
+    return 1;
+}
+void sense(int x, int y) {
+    int dx[] = {-1, 1, 0, 0};
+    int dy[] = {0, 0, -1, 1};
+
+    for (int i = 0; i < 4; i++) {
+        int nx = x + dx[i];
+        int ny = y + dy[i];
+
+        if (nx >= 0 && nx < N && ny >= 0 && ny < N) {
+            known[nx][ny] = grid[nx][ny];
+        }
+    }
+}
+void dynamicUGV(int sx, int sy, int gx, int gy) {
+    int cx = sx, cy = sy;
+
+    while (!(cx == gx && cy == gy)) {
+
+        sense(cx, cy);
+
+        if (!aStar(cx, cy, gx, gy)) {
+            printf("No path possible!\n");
+            return;
+        }
+
+        int nx, ny;
+        if (!getNextStep(cx, cy, gx, gy, &nx, &ny)) {
+            printf("Path error\n");
+            return;
+        }
+
+        printf("Move: (%d,%d) -> (%d,%d)\n", cx, cy, nx, ny);
+
+        cx = nx;
+        cy = ny;
+        if (cx == 5 && cy == 5) {
+            printf("Dynamic obstacle appeared at (6,5)\n");
+            grid[6][5] = 1;
+        }
+    }
+
+    printf("Goal Reached!\n");
+}
+
+int main() {
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++) {
+            grid[i][j] = 0;
+            known[i][j] = 0;
+        }
+    for (int i = 3; i < 10; i++)
+        grid[i][7] = 1;
+
+    printf("Dynamic UGV Navigation Start\n\n");
+
+    dynamicUGV(0, 0, 15, 15);
+
+    return 0;
+}
