@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <limits.h>
+#define V 6 
+
+int minDistance(int dist[], int visited[]) {
+    int min = INT_MAX, min_index;
+    for (int v = 0; v < V; v++) {
+        if (visited[v] == 0 && dist[v] <= min) {
+            min = dist[v];
+            min_index = v;
+        }
+    }
+
+    return min_index;
+}
+
+void printSolution(int dist[]) {
+    printf("City\tDistance from Source\n");
+    for (int i = 0; i < V; i++)
+        printf("%d \t %d km\n", i, dist[i]);
+}
+
+void dijkstra(int graph[V][V], int src) {
+
+    int dist[V];     
+    int visited[V];  
+
+    for (int i = 0; i < V; i++) {
+        dist[i] = INT_MAX;
+        visited[i] = 0;
+    }
+
+    dist[src] = 0;
+
+    for (int count = 0; count < V - 1; count++) {
+
+        int u = minDistance(dist, visited);
+
+        visited[u] = 1;
+
+        for (int v = 0; v < V; v++) {
+
+            if (!visited[v] &&
+                graph[u][v] &&
+                dist[u] != INT_MAX &&
+                dist[u] + graph[u][v] < dist[v]) {
+
+                dist[v] = dist[u] + graph[u][v];
+            }
+        }
+    }
+
+    printSolution(dist);
+}
+
+int main() {
+
+    /* Example Road Distance Graph (in KM)
+       Cities:
+       0 - Delhi
+       1 - Mumbai
+       2 - Chennai
+       3 - Kolkata
+       4 - Hyderabad
+       5 - Bangalore
+    */
+
+    int graph[V][V] = {
+
+        {0, 1400, 2200, 1500, 1550, 2150},
+        {1400, 0, 1330, 1960, 710, 980},
+        {2200, 1330, 0, 1660, 630, 350},
+        {1500, 1960, 1660, 0, 1500, 1870},
+        {1550, 710, 630, 1500, 0, 570},
+        {2150, 980, 350, 1870, 570, 0}
+    };
+
+    int source = 0;
+
+    dijkstra(graph, source);
+
+    return 0;
+}
